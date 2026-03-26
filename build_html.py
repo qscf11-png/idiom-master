@@ -1,7 +1,7 @@
 import json
 import os
 
-def build_html_pure_js():
+def build_html_stable():
     data_path = "vocab_data.js"
     output_path = "index.html"
     
@@ -12,6 +12,7 @@ def build_html_pure_js():
     with open(data_path, "r", encoding="utf-8") as f:
         js_data = f.read()
 
+    # 使用 CDNJS 做為更穩定的來源，避免 unpkg/tailwind 可能的路由 404
     content = []
     content.append("""<!DOCTYPE html>
 <html lang="zh-TW">
@@ -19,22 +20,23 @@ def build_html_pure_js():
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>英語詞彙大師 Vocab Master</title>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- 使用穩定 CDN 資源 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/umd/lucide.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Outfit', sans-serif; background: #f1f5f9; margin: 0; padding: 0; }
-        .glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.3); }
+        body { font-family: 'Outfit', sans-serif; background: #f1f5f9; margin: 0; padding: 0; overflow-x: hidden; }
+        .glass { background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.4); }
         .perspective-1000 { perspective: 1000px; }
         .transform-style-3d { transform-style: preserve-3d; }
         .backface-hidden { backface-visibility: hidden; }
         .rotate-y-180 { transform: rotateY(180deg); }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        @keyframes scaleUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .scale-up { animation: scaleUp 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.5s ease-out forwards; }
     </style>
     <script>""")
     
@@ -44,15 +46,15 @@ def build_html_pure_js():
 </head>
 <body>
     <div id="root"></div>
-    <script type="text/javascript">
+    <script>
         const { useState, useEffect, useCallback, useMemo } = React;
         const e = React.createElement;
         const STORAGE_KEY = 'vocab_master_v1';
         
         const shuffle = (arr) => {
             const n = [...arr];
-            for(let i=n.length-1; i>0; i--) {
-                const j = Math.floor(Math.random()*(i+1));
+            for(let i = n.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
                 [n[i], n[j]] = [n[j], n[i]];
             }
             return n;
@@ -60,12 +62,16 @@ def build_html_pure_js():
 
         const App = () => {
             const [vocabList, setVocabList] = useState(() => {
-                const s = localStorage.getItem(STORAGE_KEY);
-                return s ? JSON.parse(s).vocabList : [];
+                try {
+                    const s = localStorage.getItem(STORAGE_KEY);
+                    return s ? JSON.parse(s).vocabList : [];
+                } catch(e) { return []; }
             });
             const [totalInitial, setTotalInitial] = useState(() => {
-                const s = localStorage.getItem(STORAGE_KEY);
-                return s ? JSON.parse(s).totalInitial : 0;
+                try {
+                    const s = localStorage.getItem(STORAGE_KEY);
+                    return s ? JSON.parse(s).totalInitial : 0;
+                } catch(e) { return 0; }
             });
             const [stats, setStats] = useState({ again: 0, hard: 0, good: 0, easy: 0 });
             const [isFinished, setIsFinished] = useState(false);
@@ -80,11 +86,14 @@ def build_html_pure_js():
 
             const allPOS = useMemo(() => {
                 const s = new Set(['All']);
-                VOCAB_DB.forEach(x => { if(x.p) s.add(x.p.split('/')[0].trim()); });
+                if(typeof VOCAB_DB !== 'undefined') {
+                    VOCAB_DB.forEach(x => { if(x.p) s.add(x.p.split('/')[0].trim()); });
+                }
                 return Array.from(s).sort();
             }, []);
 
             const filteredCount = useMemo(() => {
+                if(typeof VOCAB_DB === 'undefined') return 0;
                 return VOCAB_DB.filter(x => {
                     const lOk = levels.includes(x.l);
                     const aOk = letter === 'All' || x.w.toLowerCase().startsWith(letter.toLowerCase());
@@ -94,6 +103,7 @@ def build_html_pure_js():
             }, [levels, letter, posFilter]);
 
             const start = () => {
+                if(typeof VOCAB_DB === 'undefined') return alert("數據載入中，請稍候...");
                 const f = VOCAB_DB.filter(x => {
                     const lOk = levels.includes(x.l);
                     const aOk = letter === 'All' || x.w.toLowerCase().startsWith(letter.toLowerCase());
@@ -135,11 +145,13 @@ def build_html_pure_js():
             };
 
             const speak = (t) => {
-                window.speechSynthesis.cancel();
-                const u = new SpeechSynthesisUtterance(t);
-                u.lang = 'en-US';
-                u.rate = speechRate;
-                window.speechSynthesis.speak(u);
+                try {
+                    window.speechSynthesis.cancel();
+                    const u = new SpeechSynthesisUtterance(t);
+                    u.lang = 'en-US';
+                    u.rate = speechRate;
+                    window.speechSynthesis.speak(u);
+                } catch(e) {}
             };
 
             useEffect(() => {
@@ -149,20 +161,20 @@ def build_html_pure_js():
             useEffect(() => { if(typeof lucide !== 'undefined') lucide.createIcons(); });
 
             if(vocabList.length === 0 && !isSettingUp && !isFinished) {
-                return e('div', { className: "flex flex-col items-center justify-center min-h-screen p-6" },
-                    e('div', { className: "glass max-w-sm w-full rounded-[40px] shadow-2xl p-10 text-center scale-up" },
-                        e('div', { className: "w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl shadow-indigo-100" },
+                return e('div', { className: "flex flex-col items-center justify-center min-h-screen p-6 fade-in" },
+                    e('div', { className: "glass max-w-sm w-full rounded-[40px] shadow-2xl p-10 text-center" },
+                        e('div', { className: "w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl" },
                             e('i', { 'data-lucide': 'graduation-cap', className: "text-white w-10 h-10" })
                         ),
                         e('h1', { className: "text-3xl font-black text-slate-800 mb-2" }, "Vocab Master"),
-                        e('p', { className: "text-slate-400 mb-10 text-xs font-bold uppercase tracking-widest" }, "7,000+ Words Database"),
-                        e('button', { onClick: () => setIsSettingUp(true), className: "w-full py-5 bg-indigo-600 text-white rounded-3xl font-black transition-all hover:bg-indigo-700 active:scale-95 shadow-lg" }, "進入設定")
+                        e('p', { className: "text-slate-400 mb-10 text-xs font-bold uppercase tracking-widest text-indigo-400/50" }, "High Probability Vocab"),
+                        e('button', { onClick: () => setIsSettingUp(true), className: "w-full py-5 bg-indigo-600 text-white rounded-3xl font-black shadow-lg hover:brightness-110 active:scale-95 transition-all" }, "進入設定")
                     )
                 );
             }
 
             if(isSettingUp) {
-                return e('div', { className: "flex flex-col items-center justify-center min-h-screen p-4" },
+                return e('div', { className: "flex flex-col items-center justify-center min-h-screen p-4 fade-in" },
                     e('div', { className: "glass max-w-md w-full rounded-[32px] shadow-2xl p-8" },
                         e('h2', { className: "text-xl font-black text-slate-800 mb-6 text-center" }, "抽籤篩選器"),
                         e('div', { className: "space-y-6" },
@@ -197,10 +209,6 @@ def build_html_pure_js():
                                 ),
                                 e('input', { type: 'range', min: '5', max: Math.min(filteredCount, 200), value: count, onChange: e=>setCount(parseInt(e.target.value)), className: "w-full h-2 bg-slate-100 rounded-lg appearance-none accent-indigo-600" })
                             ),
-                            e('div', { className: "p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex justify-between items-center" },
-                                e('span', { className: "text-xs font-bold text-indigo-400" }, "符合條件總筆數"),
-                                e('span', { className: "text-xl font-black text-indigo-600" }, filteredCount)
-                            ),
                             e('button', { onClick: start, className: "w-full py-4 bg-slate-800 text-white rounded-2xl font-black shadow-xl hover:bg-slate-900 transition-all" }, "開始測試"),
                             e('button', { onClick: () => setIsSettingUp(false), className: "w-full text-xs font-bold text-slate-400" }, "取消")
                         )
@@ -209,16 +217,10 @@ def build_html_pure_js():
             }
 
             if(isFinished) {
-                return e('div', { className: "flex flex-col items-center justify-center min-h-screen p-6" },
+                return e('div', { className: "flex flex-col items-center justify-center min-h-screen p-6 fade-in" },
                     e('div', { className: "glass max-w-sm w-full rounded-[40px] shadow-2xl p-10 text-center" },
                         e('i', { 'data-lucide': 'award', className: "w-16 h-16 text-yellow-500 mx-auto mb-6" }),
                         e('h2', { className: "text-2xl font-black text-slate-800 mb-2" }, "測試完成！"),
-                        e('div', { className: "grid grid-cols-2 gap-2 my-8" },
-                            e('div', { className: "bg-red-50 p-3 rounded-2xl text-red-600" }, e('p', { className: "text-[8px] font-black uppercase" }, "Again"), e('p', { className: "text-xl font-black" }, stats.again)),
-                            e('div', { className: "bg-orange-50 p-3 rounded-2xl text-orange-600" }, e('p', { className: "text-[8px] font-black uppercase" }, "Hard"), e('p', { className: "text-xl font-black" }, stats.hard)),
-                            e('div', { className: "bg-blue-50 p-3 rounded-2xl text-blue-600" }, e('p', { className: "text-[8px] font-black uppercase" }, "Good"), e('p', { className: "text-xl font-black" }, stats.good)),
-                            e('div', { className: "bg-green-50 p-3 rounded-2xl text-green-600" }, e('p', { className: "text-[8px] font-black uppercase" }, "Easy"), e('p', { className: "text-xl font-black" }, stats.easy))
-                        ),
                         e('button', { onClick: () => { setVocabList([]); setIsFinished(false); setIsSettingUp(false); }, className: "w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg" }, "新測試")
                     )
                 );
@@ -227,7 +229,7 @@ def build_html_pure_js():
             const current = vocabList[0];
             const progress = ((totalInitial - vocabList.length) / totalInitial) * 100;
 
-            return e('div', { className: "flex flex-col items-center min-h-screen p-4 overflow-hidden relative" },
+            return e('div', { className: "flex flex-col items-center min-h-screen p-4 overflow-hidden" },
                 e('div', { className: "w-full max-w-md glass rounded-2xl shadow-lg p-4 mb-4 flex flex-col gap-3" },
                     e('div', { className: "flex justify-between items-center text-[10px] font-black text-slate-400" },
                         e('div', { className: "flex gap-1" },
@@ -237,7 +239,7 @@ def build_html_pure_js():
                             e('span', { className: "text-green-500 bg-green-50 px-1.5 rounded" }, stats.easy)
                         ),
                         e('span', null, `${vocabList.length} / ${totalInitial}`),
-                        e('button', { onClick: reset, className: "hover:text-red-500" }, e('i', { 'data-lucide': 'rotate-ccw', className: "w-3.5 h-3.5" }))
+                        e('button', { onClick: reset }, e('i', { 'data-lucide': 'rotate-ccw', className: "w-3.5 h-3.5" }))
                     ),
                     e('div', { className: "w-full h-1.5 bg-slate-100 rounded-full overflow-hidden" },
                         e('div', { className: "bg-indigo-500 h-full transition-all", style: { width: `${progress}%` } })
@@ -249,8 +251,8 @@ def build_html_pure_js():
                         className: `relative w-full h-full transition-all duration-700 transform-style-3d cursor-pointer ${isFlipped?'rotate-y-180':''}`
                     },
                         e('div', { className: "absolute inset-0 backface-hidden bg-white rounded-[40px] shadow-2xl p-8 flex flex-col items-center justify-center border-8 border-white" },
-                            e('div', { className: "absolute top-6 right-6 flex gap-2" },
-                                e('button', { onClick: e_stop => { e_stop.stopPropagation(); speak(current.w); }, className: "p-2 bg-indigo-50 text-indigo-600 rounded-full" }, e('i', { 'data-lucide': 'volume-2', className: "w-5 h-5" }))
+                            e('div', { className: "absolute top-6 right-6" },
+                                e('button', { onClick: es => { es.stopPropagation(); speak(current.w); }, className: "p-2 bg-indigo-50 text-indigo-600 rounded-full" }, e('i', { 'data-lucide': 'volume-2', className: "w-5 h-5" }))
                             ),
                             e('div', { className: "w-full h-40 bg-slate-50 rounded-3xl mb-8 overflow-hidden relative flex items-center justify-center border border-slate-100" },
                                 !imgOk && e('i', { 'data-lucide': 'image', className: "w-8 h-8 text-slate-200" }),
@@ -260,26 +262,25 @@ def build_html_pure_js():
                                     className: `w-full h-full object-cover transition-opacity ${imgOk?'opacity-100':'opacity-0'}`
                                 })
                             ),
-                            e('h2', { className: "text-4xl font-black text-slate-800 text-center" }, current.w),
-                            e('p', { className: "mt-8 text-[10px] font-black text-slate-300 uppercase tracking-[0.4em] animate-pulse" }, "Tap to Reveal")
+                            e('h2', { className: "text-4xl font-black text-slate-800 text-center" }, current.w)
                         ),
-                        e('div', { className: "absolute inset-0 backface-hidden bg-white rounded-[40px] shadow-2xl p-8 flex flex-col rotate-y-180 border-8 border-white" },
+                        e('div', { className: "absolute inset-0 backface-hidden bg-white rounded-[40px] shadow-2xl p-8 flex flex-col rotate-y-180 border-8 border-white overflow-hidden" },
                             e('div', { className: "flex justify-between items-center mb-4" },
                                 e('div', { className: "flex gap-2" },
-                                    e('span', { className: "px-2 py-0.5 bg-indigo-600 text-white text-[9px] font-black rounded uppercase" }, `L${current.l}`),
-                                    e('span', { className: "px-2 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-black rounded uppercase" }, current.p)
+                                    e('span', { className: "px-2 py-0.5 bg-indigo-600 text-white text-[9px] font-black rounded" }, `L${current.l}`),
+                                    e('span', { className: "px-2 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-black rounded" }, current.p)
                                 ),
-                                e('button', { onClick: e_stop => { e_stop.stopPropagation(); speak(current.w); }, className: "p-2 bg-indigo-50 text-indigo-600 rounded-full" }, e('i', { 'data-lucide': 'volume-2', className: "w-4 h-4" }))
+                                e('button', { onClick: es => { es.stopPropagation(); speak(current.w); }, className: "p-2 bg-indigo-50 text-indigo-600 rounded-full" }, e('i', { 'data-lucide': 'volume-2', className: "w-4 h-4" }))
                             ),
-                            e('h2', { className: "text-2xl font-black text-indigo-600 mb-6" }, current.w),
+                            e('h2', { className: "text-2xl font-black text-indigo-600 mb-4" }, current.w),
                             e('div', { className: "flex-grow overflow-y-auto custom-scrollbar pr-2 space-y-3" },
-                                e('div', { className: "text-[15px] font-bold text-slate-700 leading-relaxed border-l-4 border-indigo-200 pl-3" }, current.d),
-                                current.i && e('div', { className: "text-[13px] text-slate-500 font-mono pl-3" }, current.i),
-                                current.t && e('div', { className: "text-[13px] text-slate-600 bg-slate-50 p-2 rounded-lg italic" }, current.t),
+                                e('div', { className: "text-[15px] font-bold text-slate-700 border-l-4 border-indigo-200 pl-3" }, current.d),
+                                current.i && e('div', { className: "text-[13px] text-slate-500 pl-3" }, current.i),
+                                current.t && e('div', { className: "text-[13px] text-slate-600 italic" }, current.t),
                                 current.c && e('div', { className: "text-[13px] text-indigo-500 font-bold border-t border-slate-50 pt-2" }, current.c),
-                                current.x && e('div', { className: "text-[13px] text-slate-700 bg-indigo-50/30 p-3 rounded-xl border border-indigo-50" }, current.x)
+                                current.x && e('div', { className: "text-[13px] text-slate-700 bg-indigo-50/20 p-3 rounded-xl" }, current.x)
                             ),
-                            e('div', { className: "grid grid-cols-4 gap-2 mt-6" },
+                            e('div', { className: "grid grid-cols-4 gap-2 mt-4" },
                                 e('button', { onClick: es => { es.stopPropagation(); handleSRS('again'); }, className: "py-3 bg-red-50 text-red-600 rounded-2xl text-[9px] font-black" }, "AGAIN"),
                                 e('button', { onClick: es => { es.stopPropagation(); handleSRS('hard'); }, className: "py-3 bg-orange-50 text-orange-600 rounded-2xl text-[9px] font-black" }, "HARD"),
                                 e('button', { onClick: es => { es.stopPropagation(); handleSRS('good'); }, className: "py-3 bg-blue-50 text-blue-600 rounded-2xl text-[9px] font-black" }, "GOOD"),
@@ -295,8 +296,12 @@ def build_html_pure_js():
                 )
             );
         };
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(e(App));
+        
+        // 確保 DOM 載入後再渲染
+        window.addEventListener('load', () => {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(e(App));
+        });
     </script>
 </body>
 </html>""")
@@ -304,7 +309,7 @@ def build_html_pure_js():
     with open(output_path, "w", encoding="utf-8") as f:
         f.write("".join(content))
     
-    print(f"Vocab Master Tool Build (Pure JS) Success.")
+    print(f"Vocab Master Tool Build (Hardened JS) Success.")
 
 if __name__ == "__main__":
-    build_html_pure_js()
+    build_html_stable()
