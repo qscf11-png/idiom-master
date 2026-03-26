@@ -22,6 +22,7 @@ def build_html_v3():
     <title>Vocab Master - 英語詞彙大師</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
@@ -43,7 +44,7 @@ def build_html_v3():
 </head>
 <body>
     <div id="root"></div>
-    <script type="text/javascript">
+    <script type="text/babel">
         const { useState, useEffect, useCallback, useMemo } = React;
         const STORAGE_KEY = 'vocab_master_v1';
         
@@ -300,7 +301,7 @@ def build_html_v3():
             );
         };
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(React.createElement(App));
+        root.render(<App />);
     </script>
 </body>
 </html>""")
