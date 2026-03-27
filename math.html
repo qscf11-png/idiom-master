@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學習大師 Math Master</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Outfit', 'Noto Sans TC', sans-serif; background: #f1f5f9; min-height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.3); border-radius: 3rem; padding: 3rem; max-width: 450px; width: 100%; text-align: center; }
+        .math-card { min-height: 400px; display: flex; flex-direction: column; justify-content: center; }
+        .math-tex { font-size: 1.3em; margin: 1rem 0; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script>
+        window.M_DATA = [
+    // === 七年級上學期 ===
+    // 第一章：數與量
+    { "w": "整數的加減法：同號數相加？", "d": "取其共同性質符號，再將其絕對值相加。", "l": 7 },
+    { "w": "整數的乘除法：異號數相乘？", "d": "結果必為負數 (負號)。", "l": 7 },
+    { "w": "$a$ 的絕對值 $|a|$ 的幾何意義？", "d": "點 $a$ 到原點的「距離」。", "l": 7 },
+    { "w": "數線上 $A(a)$ 與 $B(b)$ 兩點間的距離公式？", "d": "$\\overline{AB} = |a - b|$", "l": 7 },
+    { "w": "因數 (Factor) 的定義？", "d": "若整數 $a$ 能被整數 $b$ 整除，則 $b$ 為 $a$ 的因數。", "l": 7 },
+    { "w": "質數 (Prime Number) 的定義？", "d": "大於 1 的整數中，除了 1 和本身以外沒有其他因數的數。", "l": 7 },
+    { "w": "科學記號 (Scientific Notation) 的格式？", "d": "$a \\times 10^n$ (其中 $1 \\le |a| < 10$，$n$ 為整數)", "l": 7 },
+    
+    // 第二章：數與量
+    { "w": "分數的乘法：$\\frac{a}{b} \\times \\frac{c}{d} = ?$", "d": "$\\frac{a \times c}{b \times d}$", "l": 7 },
+    { "w": "分數的除法：$\\frac{a}{b} \\div \\frac{c}{d} = ?$", "d": "$\\frac{a}{b} \\times \\frac{d}{c}$ (乘以倒數)", "l": 7 },
+    { "w": "標準分解式 (Prime Factorization)？", "d": "將一個合數表示成其質因數乘積的形式，且從小排到大。", "l": 7 },
+    { "w": "最大公因數 (GCD) 的符號標示？", "d": "$(a, b)$", "l": 7 },
+    { "w": "最小公倍數 (LCM) 的符號標示？", "d": "$[a, b]$", "l": 7 },
+
+    // 第三章：代數
+    { "w": "一元一次方程式的定義？", "d": "只有一個未知數，且該未知數的最高次數為 1 的等式。", "l": 7 },
+    { "w": "等量公理 (Addition/Multiplication Property)？", "d": "等式兩邊同時加、減、乘、除同一個數（除數不為0），等式仍成立。", "l": 7 },
+    { "w": "解方程式的「移項法則」？", "d": "加變減、減變加、乘變除、除變乘。", "l": 7 },
+
+    // === 七年級下學期 ===
+    // 第一章：代數
+    { "w": "二元一次聯立方程式的解法？", "d": "代入消去法、加減消去法。", "l": 7 },
+    { "w": "找出聯立方程式唯一解的幾何意義？", "d": "兩條直線在座標平面上的交點。", "l": 7 },
+
+    // 第二章：坐標幾何
+    { "w": "直角坐標平面的四個象限？", "d": "右上(I), 左上(II), 左下(III), 右下(IV)。", "l": 7 },
+    { "w": "二元一次方程式的圖形 $ax + by = c$？", "d": "在一平面的直角座標系中，其圖形為一條「直線」。", "l": 7 },
+    { "w": "線型函數 (Linear Function) 的一般式？", "d": "$y = ax + b$ (a為斜率, b為y軸截距)", "l": 7 },
+
+    // 第三章：數與量
+    { "w": "比 (Ratio) 與比值？", "d": "$a:b$ 的比值為 $\\frac{a}{b}$ ($b \\neq 0$ )。", "l": 7 },
+    { "w": "連比例式？", "d": "若 $x:y:z = a:b:c$，則可設 $x=ak, y=bk, z=ck$ ($k$ 為常數)。", "l": 7 },
+    { "w": "比例分配 (Proportional Allocation)？", "d": "將一總量按照給定的比例進行分配的方法。", "l": 7 },
+
+    // 第四章：代數
+    { "w": "一元一次不等式的解在數線上的表示？", "d": "大於(>)向右畫圓圈排除，小於(<)向左畫圓圈排除；包含等號為實心點。", "l": 7 },
+    { "w": "不等式的性質：同乘除負數？", "d": "不等號的方向必須「反向」。", "l": 7 },
+
+    // 第五、六章：資料與不確定性
+    { "w": "幾何三視圖 (Three-view drawing)？", "d": "前視圖、上視圖、側視圖。", "l": 7 },
+    { "w": "次數分配表與直方圖？", "d": "用以呈現資料分佈狀況的統計圖表。", "l": 7 },
+
+    // === 八年級上學期 ===
+    // 第一章：代數
+    { "w": "和平方公式 $(a+b)^2 = ?$", "d": "$a^2 + 2ab + b^2$", "l": 8 },
+    { "w": "差平方公式 $(a-b)^2 = ?$", "d": "$a^2 - 2ab + b^2$", "l": 8 },
+    { "w": "平方差公式 $(a+b)(a-b) = ?$", "d": "$a^2 - b^2$", "l": 8 },
+    { "w": "多項式的定義？", "d": "由常數與變數經過有限次的加、減、乘運算所組成的代數式。", "l": 8 },
+
+    // 第二章：幾何
+    { "w": "若 $x^2 = a$ ($a \\ge 0$)，則 $x$ 稱為 $a$ 的？", "d": "平方根 ($\\pm\\sqrt{a}$)", "l": 8 },
+    { "w": "勾股定理 (畢氏定理) 公式？", "d": "$a^2 + b^2 = c^2$ ($c$ 為斜邊)", "l": 8 },
+
+    // 第三章：代數
+    { "w": "因式分解 (Factorization) 的定義？", "d": "將一個多項式寫成多個多項式乘積的過程。", "l": 8 },
+    { "w": "十字交乘法 (Cross Multiplication)？", "d": "利用係數配對來分解二次三項式的方法。", "l": 8 },
+    { "w": "提公因式法？", "d": "利用分配律的逆運算，將各項公有的因式提到括號外。", "l": 8 },
+
+    // 第四章：代數
+    { "w": "一元二次方程式 $ax^2 + bx + c = 0$ 的求根公式？", "d": "$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$", "l": 8 },
+    { "w": "一元二次方程式的判別式 $D = ?$", "d": "$b^2 - 4ac$ (D>0 兩相異實根, D=0 重根, D<0 無實根)", "l": 8 },
+
+    // === 八年級下學期 ===
+    // 第一章：代數
+    { "w": "等差數列第 $n$ 項公式 $a_n = ?$", "d": "$a_1 + (n-1)d$", "l": 8 },
+    { "w": "等差級數前 $n$ 項和公式 $S_n = ?$", "d": "$S_n = \\frac{n(a_1 + a_n)}{2}$ 或 $\\frac{n[2a_1 + (n-1)d]}{2}$", "l": 8 },
+    { "w": "等比數列 (Geometric Progression)？", "d": "後項除以前項的比值 (公比 $r$) 為定值的數列。", "l": 8 },
+
+    // 第二章：函數
+    { "w": "常數函數 (Constant Function)？", "d": "$y = k$ (其圖形為一條水平線)。", "l": 8 },
+
+    // 第三章：幾何
+    { "w": "尺規作圖 (Straightedge and Compass Construction) 限定工具？", "d": "沒有刻度的直尺、圓規。", "l": 8 },
+    { "w": "三角形的內角和與外角和？", "d": "內角和 $180^\circ$，外角和 $360^\circ$。", "l": 8 },
+    { "w": "SSS 全等性質？", "d": "三邊對應相等，則兩三角形全等。", "l": 8 },
+
+    // 第四章：幾何
+    { "w": "平行線的性質：內錯角？", "d": "若兩平行線被一直線所截，則其「內錯角相等」。", "l": 8 },
+    { "w": "平行四邊形的判定？", "d": "對邊平行、對邊相等、對角相等、對角線互相平分（任一成立）。", "l": 8 },
+    { "w": "梯形 (Trapezoid) 的面積公式？", "d": "(上底 + 下底) $\\times$ 高 $\div 2$。", "l": 8 },
+
+    // === 九年級上學期 ===
+    // 第一章：幾何
+    { "w": "相似三角形對應邊與面積比的關係？", "d": "面積比等於「對應邊長的平方比」。", "l": 9 },
+    { "w": "相似三角形的判定性質？", "d": "$AA/SAS/SSS$ 相似性質。", "l": 9 },
+    { "w": "比例線段性質？", "d": "平行三角形一邊的直線，截其餘兩邊成「比例線段」。", "l": 9 },
+    { "w": "直角三角形中 $\\sin \\theta$ 的定義？", "d": "$\\frac{\\text{對邊}}{\\text{斜邊}}$", "l": 9 },
+
+    // 第二章：幾何
+    { "w": "圓心角與其所對弧的度數關係？", "d": "圓心角度數 = 所對弧的度數。", "l": 9 },
+    { "w": "圓與切線的性質？", "d": "圓心到切線的距離等於半徑，且半徑垂直於切點的切線。", "l": 9 },
+    { "w": "圓周角、弦切角性質？", "d": "圓周角 = 弦切角 = $\\frac{1}{2}$ 所對弧的度數。", "l": 9 },
+
+    // 第三章：幾何
+    { "w": "幾何證明的基本邏輯？", "d": "利用已知條件與公理、定理，推匯出結論的過程。", "l": 9 },
+    { "w": "三角形的「外心」 (O) 是哪三條線的交點？", "d": "三邊的「中垂線」交點 (到三頂點等距)。", "l": 9 },
+    { "w": "三角形的「內心」 (I) 是哪三條線的交點？", "d": "三個「內角平分線」交點 (到三邊等距)。", "l": 9 },
+    { "w": "三角形的「重心」 (G) 是哪三條線的交點？", "d": "三條「中線」的交點 (比例 $2:1$)。", "l": 9 },
+
+    // === 九年級下學期 ===
+    // 第一章：函數
+    { "w": "二次函數 $y = ax^2 + bx + c$ 的圖形？", "d": "一條「拋物線」 (a>0 向下凹, a<0 向上凹)。", "l": 9 },
+    { "w": "二次函數的頂點座標公式？", "d": "$( -\\frac{b}{2a}, \\frac{4ac - b^2}{4a} )$", "l": 9 },
+
+    // 第二章：資料與不確定性
+    { "w": "中位數 (Median) 的定義？", "d": "將資料從小到大排列，處於中間位置的數組。", "l": 9 },
+    { "w": "古典機率的公式 $P(A) = ?$", "d": "$\\frac{\\text{事件A的結果數}}{\\text{所有可能的結果總數}}$", "l": 9 },
+    { "w": "百分位數 (Percentile) 的概念？", "d": "衡量某數據點在整組數據分佈中所處相對位置的統計量。", "l": 9 },
+
+    // 第三章：幾何
+    { "w": "立體幾何圖形：角柱體積公式？", "d": "底面積 $\\times$ 高", "l": 9 },
+    { "w": "立體幾何圖形：圓錐體積公式？", "d": "$\\frac{1}{3} \\pi r^2 h$", "l": 9 },
+    { "w": "球體表面積公式？", "d": "$4 \\pi r^2$", "l": 9 }
+];
+        (function() {
+            const e = React.createElement;
+            const { useState, useEffect } = React;
+            function App() {
+                const [idx, setIdx] = useState(0);
+                const [flip, setFlip] = useState(false);
+                const list = window.M_DATA || [];
+                useEffect(() => { window.renderMathInElement(document.body, { delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}] }); }, [idx, flip]);
+                const next = () => { setIdx((idx + 1) % list.length); setFlip(false); };
+                if (list.length === 0) return e('div', null, "無數據");
+                const item = list[idx];
+                return e('div', {className:"glass"},
+                    e('h1', {className:"text-xs font-black text-slate-400 uppercase mb-8"}, "國中數學觀念測驗 ("+(idx+1)+"/"+list.length+")"),
+                    e('div', {className:"math-card", onClick:()=>setFlip(!flip)},
+                        !flip ? e('h2', {className:"text-3xl font-black math-tex"}, item.w) : e('div', null, e('p', {className:"text-xl font-bold bg-white p-6 rounded-2xl shadow-sm math-tex"}, item.d))
+                    ),
+                    e('div', {className:"flex gap-4 mt-8"},
+                        e('button', {onClick:next, className:"flex-grow py-4 bg-slate-900 text-white rounded-2xl font-black"}, "下一題"),
+                        e('a', {href:'entry.html', className:"px-6 py-4 bg-white text-slate-400 rounded-2xl font-black border border-slate-200"}, "✕")
+                    )
+                );
+            }
+            ReactDOM.createRoot(document.getElementById('root')).render(e(App));
+        })();
+    </script>
+</body>
+</html>
