@@ -5,6 +5,7 @@ from opencc import OpenCC
 def build_html():
     vocab_data_path = "vocab_data.js"
     idiom_data_path = "idiom_data.js"
+    math_data_path = "math_data.js"
     output_path = "index.html"
     
     cc = OpenCC('s2t') # 簡體轉繁體
@@ -32,22 +33,37 @@ def build_html():
     # 成語資料繁體化
     idiom_js = cc.convert(idiom_js)
 
+    # 讀取數學資料
+    math_js = "[]"
+    if os.path.exists(math_data_path):
+        with open(math_data_path, "r", encoding="utf-8") as f:
+            read_m = f.read()
+            math_js = read_m.replace("const MATH_DB = ", "").strip()
+            if math_js.endswith(";"): math_js = math_js[:-1]
+
     content = []
     content.append(r"""<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全能學習大師 Vocab & Idiom Master</title>
+    <title>全能學習大師 Vocab & Idiom & Math Master</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Outfit', 'Noto Sans TC', sans-serif; background: linear-gradient(135deg, #e0e7ff 0%, #f1f5f9 50%, #dbeafe 100%); margin: 0; padding: 0; min-height: 100vh; }
         .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.5); }
         .info-block { border-left: 4px solid; padding: 8px 12px; border-radius: 0 8px 8px 0; margin-bottom: 8px; }
+        .katex { font-size: 1.1em; }
         /* SRS 按鈕顏色 */
         .btn-again { border-color: #fee2e2; color: #dc2626; background: #fff5f5; }
         .btn-again:hover { background: #fee2e2; }
@@ -57,6 +73,10 @@ def build_html():
         .btn-good:hover { background: #dcfce7; }
         .btn-easy { border-color: #dbeafe; color: #2563eb; background: #eff6ff; }
         .btn-easy:hover { background: #dbeafe; }
+        
+        .math-card { font-family: 'Times New Roman', serif; }
+        @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-slide { animation: slideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
     </style>
 </head>
 <body>
@@ -64,8 +84,8 @@ def build_html():
     <script id="vocab-data" type="application/json">""")
     content.append(v_js)
     content.append(r"""</script>
-    <script id="idiom-data" type="application/json">""")
-    content.append(idiom_js)
+    <script id="math-data" type="application/json">""")
+    content.append(math_js)
     content.append(r"""</script>
 
     <script type="text/javascript">
@@ -88,6 +108,7 @@ def build_html():
             
             var VOCAB_DB_RAW = JSON.parse(document.getElementById('vocab-data').textContent);
             var IDIOM_DB_RAW = JSON.parse(document.getElementById('idiom-data').textContent);
+            var MATH_DB_RAW = JSON.parse(document.getElementById('math-data').textContent);
 
             function shuffle(arr) {
                 var n = arr.slice();
@@ -109,7 +130,7 @@ def build_html():
                     var ws = XLSX.utils.json_to_sheet(data);
                     XLSX.utils.book_append_sheet(wb, ws, '英文單字');
                     XLSX.writeFile(wb, 'english_vocab_template.xlsx');
-                } else {
+                } else if (type === 'idiom') {
                     var data = [
                         { word: '一石二鳥', explanation: '比喻做一件事同時達到兩個目的。', pinyin: 'yī shí èr niǎo', source: '《英語諺語》', example: '這次活動一石二鳥，既宣傳了產品又拉近了客戶關係。' },
                         { word: '畫龍點睛', explanation: '比喻作文或說話時，在關鍵處加上精闢的語句，使內容更加生動。', pinyin: 'huà lóng diǎn jīng', source: '《歷代名畫記》', example: '他的最後一句話真是畫龍點睛。' }
@@ -117,6 +138,14 @@ def build_html():
                     var ws = XLSX.utils.json_to_sheet(data);
                     XLSX.utils.book_append_sheet(wb, ws, '中文成語');
                     XLSX.writeFile(wb, 'idiom_template.xlsx');
+                } else {
+                    var data = [
+                        { question: '速度公式', answer: '距離 (Distance) / 時間 (Time) = 速度', level: 7 },
+                        { question: '一元二次求根公式', answer: '$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$', level: 8 }
+                    ];
+                    var ws = XLSX.utils.json_to_sheet(data);
+                    XLSX.utils.book_append_sheet(wb, ws, '國中數學');
+                    XLSX.writeFile(wb, 'math_template.xlsx');
                 }
             }
 
@@ -133,9 +162,15 @@ def build_html():
                     // 自動偵測科目類型
                     var keys = Object.keys(rows[0]).map(function(k) { return k.toLowerCase(); });
                     var isIdiom = keys.indexOf('explanation') !== -1 || keys.indexOf('pinyin') !== -1;
+                    var isMath = keys.indexOf('question') !== -1 || keys.indexOf('answer') !== -1;
                     
                     var converted;
-                    if (isIdiom) {
+                    if (isMath) {
+                        converted = rows.map(function(r) {
+                            return { w: r.question || '', d: r.answer || '', l: parseInt(r.level) || 7 };
+                        });
+                        callback({ subject: 'math', data: converted });
+                    } else if (isIdiom) {
                         converted = rows.map(function(r) {
                             return { w: r.word || r.Word || '', d: r.explanation || r.Explanation || '', py: r.pinyin || r.Pinyin || '', o: r.source || r.Source || '', x: r.example || r.Example || '' };
                         });
@@ -343,13 +378,14 @@ def build_html():
                 var currentDB = useMemo(function() {
                     if (customDB) return customDB;
                     if (!subject) return [];
+                    if (subject === 'math') return MATH_DB_RAW;
                     return subject === 'idiom' ? IDIOM_DB_RAW : VOCAB_DB_RAW;
                 }, [subject, customDB]);
 
                 var filteredCount = useMemo(function() {
                     if (!subject) return 0;
                     if (customDB) return customDB.length;
-                    if (subject === 'idiom') return currentDB.length;
+                    if (subject === 'idiom' || subject === 'math') return currentDB.length;
                     return currentDB.filter(function(x) { return levels.indexOf(x.l) !== -1; }).length;
                 }, [currentDB, levels, subject, customDB]);
 
@@ -357,7 +393,7 @@ def build_html():
                     var f;
                     if (customDB) {
                         f = customDB;
-                    } else if (subject === 'idiom') {
+                    } else if (subject === 'idiom' || subject === 'math') {
                         f = currentDB;
                     } else {
                         f = currentDB.filter(function(x) { return levels.indexOf(x.l) !== -1; });
@@ -402,8 +438,8 @@ def build_html():
                 useEffect(function() {
                     if (activeList.length > 0 && !isFlipped && !isSettingUp && !isFinished) {
                         var item = activeList[0];
-                        var l = (subject === 'idiom') ? 'zh-TW' : 'en-US';
-                        if (mode === 'flashcard') {
+                        var l = (subject === 'idiom' || subject === 'math') ? 'zh-TW' : 'en-US';
+                        if (mode === 'flashcard' && subject !== 'math') { 
                             setTimeout(function() { speak(item.w, speechRate, l); }, 300);
                         } else if (mode === 'fillin' && subject === 'idiom') {
                             setTimeout(function() { speak(item.d, speechRate, 'zh-TW'); }, 300);
@@ -415,11 +451,25 @@ def build_html():
                 useEffect(function() {
                     if (activeList.length > 0 && isFlipped && !isFinished) {
                         var item = activeList[0];
+                        if (subject === 'math') return; // 數學暫不朗讀公式
                         var l = (subject === 'idiom') ? 'zh-TW' : 'en-US';
                         var textToSpeak = item.x ? item.x : item.w;
                         setTimeout(function() { speak(textToSpeak, speechRate, l); }, 100);
                     }
                 }, [isFlipped]);
+
+                // KaTeX 渲染
+                useEffect(function() {
+                    if (typeof renderMathInElement === 'function') {
+                        renderMathInElement(document.body, {
+                            delimiters: [
+                                {left: '$$', right: '$$', display: true},
+                                {left: '$', right: '$', display: false}
+                            ],
+                            throwOnError: false
+                        });
+                    }
+                }, [activeList.length, isFlipped, isSettingUp, isFinished]);
 
                 // 快捷鍵
                 useEffect(function() {
@@ -441,7 +491,7 @@ def build_html():
                 // ===== 首頁 =====
                 if (!subject || (!activeList.length && !isSettingUp && !isFinished)) {
                     return h('div', { className: "flex flex-col items-center justify-center min-h-screen p-6" },
-                        h('div', { className: "glass max-w-sm w-full rounded-3xl p-10 text-center" },
+                        h('div', { className: "glass max-w-sm w-full rounded-3xl p-10 text-center animate-slide" },
                             h('h1', { className: "text-3xl font-black mb-6" }, "全能學習大師"),
                             h('div', { className: "grid grid-cols-1 gap-3 mb-6" },
                                 // 英文模式
@@ -449,17 +499,19 @@ def build_html():
                                 h('button', { onClick: function() { setCustomDB(null); setSubject('vocab'); setMode('fillin'); setIsSettingUp(true); }, className: "py-4 rounded-2xl border-2 hover:bg-violet-50 transition-all font-bold" }, "英文單字 (填空)"),
                                 // 成語模式
                                 h('button', { onClick: function() { setCustomDB(null); setSubject('idiom'); setMode('flashcard'); setIsSettingUp(true); }, className: "py-4 rounded-2xl border-2 hover:bg-emerald-50 transition-all font-bold" }, "中文成語 (閃卡)"),
-                                h('button', { onClick: function() { setCustomDB(null); setSubject('idiom'); setMode('fillin'); setIsSettingUp(true); }, className: "py-4 rounded-2xl border-2 hover:bg-amber-50 transition-all font-bold" }, "中文成語 (填空)")
+                                h('button', { onClick: function() { setCustomDB(null); setSubject('idiom'); setMode('fillin'); setIsSettingUp(true); }, className: "py-4 rounded-2xl border-2 hover:bg-amber-50 transition-all font-bold" }, "中文成語 (填空)"),
+                                // 數學模式
+                                h('button', { onClick: function() { setCustomDB(null); setSubject('math'); setMode('flashcard'); setIsSettingUp(true); }, className: "py-4 rounded-2xl bg-slate-900 text-white hover:opacity-90 transition-all font-black shadow-xl shadow-slate-200" }, "國中數學 (觀念閃卡)")
                             ),
                             // 匯入自訂字庫
                             h('div', { className: "border-t border-slate-200 pt-6 mt-2 space-y-3" },
                                 h('input', { type: 'file', accept: '.xlsx,.xls', ref: fileInputRef, onChange: handleFileImport, className: 'hidden' }),
-                                h('button', { onClick: function() { fileInputRef.current && fileInputRef.current.click(); }, className: "w-full py-4 rounded-2xl border-2 border-dashed border-slate-300 hover:bg-slate-50 transition-all font-bold text-slate-500" }, "📂 匯入自訂 Excel 字庫"),
-                                h('p', { className: "text-xs text-slate-400" }, "支援英文單字 / 中文成語格式，系統自動偵測"),
+                                h('button', { onClick: function() { fileInputRef.current && fileInputRef.current.click(); }, className: "w-full py-4 rounded-2xl border-2 border-dashed border-slate-300 hover:bg-slate-50 transition-all font-bold text-slate-500 text-sm" }, "📂 匯入 Excel (英文/中文/數學)"),
                                 // 範本下載
-                                h('div', { className: "flex gap-2 justify-center" },
+                                h('div', { className: "flex gap-2 justify-center flex-wrap" },
                                     h('button', { onClick: function() { downloadTemplate('vocab'); }, className: "text-xs text-indigo-500 hover:text-indigo-700 underline" }, "📥 英文範本"),
-                                    h('button', { onClick: function() { downloadTemplate('idiom'); }, className: "text-xs text-emerald-500 hover:text-emerald-700 underline" }, "📥 中文範本")
+                                    h('button', { onClick: function() { downloadTemplate('idiom'); }, className: "text-xs text-emerald-500 hover:text-emerald-700 underline" }, "📥 中文範本"),
+                                    h('button', { onClick: function() { downloadTemplate('math'); }, className: "text-xs text-slate-500 hover:text-slate-700 underline" }, "📥 數學範本")
                                 )
                             )
                         )
@@ -516,19 +568,19 @@ def build_html():
                 // ===== 測驗主畫面 =====
                 var curr = activeList[0];
                 var prog = ((totalInitial - activeList.length) / totalInitial) * 100;
-                var l_tag = (subject === 'idiom') ? 'zh-TW' : 'en-US';
+                var l_tag = (subject === 'idiom' || subject === 'math') ? 'zh-TW' : 'en-US';
 
                 return h('div', { className: "flex flex-col items-center min-h-screen p-4" },
                     // 頂部導航列
                     h('div', { className: "w-full max-w-lg flex items-center gap-4 mb-4" }, 
-                        h('button', { onClick: goHome, className: "p-2 glass rounded-xl text-slate-400 hover:text-slate-600" }, "🏠"),
+                        h('button', { onClick: goHome, className: "p-2 glass rounded-xl text-slate-400 hover:text-slate-600 shadow-sm" }, "🏠"),
                         h('div', { className: "flex-1 h-2 bg-white/50 rounded-full overflow-hidden" }, h('div', { className: "bg-indigo-500 h-full transition-all duration-500", style: { width: prog + "%" } })),
                         h('span', { className: 'text-xs text-slate-400 font-bold' }, activeList.length + ' 剩餘')
                     ),
                     // 正面
-                    !isFlipped ? h('div', { className: "glass max-w-lg w-full rounded-3xl p-10 text-center" },
+                    !isFlipped ? h('div', { className: "glass max-w-lg w-full rounded-3xl p-10 text-center shadow-xl animate-slide " + (subject === 'math' ? 'math-card' : '') },
                         mode === 'flashcard' ? h('div', { onClick: function() { setIsFlipped(true); }, className: "cursor-pointer py-10" },
-                            h('h2', { className: "text-5xl font-black mb-6 " + (subject==='idiom'?'tracking-widest':'') }, curr.w),
+                            h('h2', { className: "text-3xl md:text-5xl font-black mb-6 leading-relaxed " + (subject==='idiom'?'tracking-widest':'') }, curr.w),
                             curr.py && h('p', { className: "text-lg text-slate-400 font-mono mb-10" }, curr.py),
                             h('p', { className: "text-xs font-black text-slate-300 animate-pulse" }, "點擊查看解答")
                         ) : (subject === 'idiom' ? 
@@ -550,24 +602,45 @@ def build_html():
                                 h(VocabFillIn, { key: curr.w, word: curr.w, onComplete: function() { setIsFlipped(true); } })
                             )
                         )
-                    ) : 
+                    ) :
                     // 背面
-                    h('div', { className: "glass max-w-lg w-full rounded-3xl p-8" },
-                        h('div', { className: "flex justify-between items-center mb-4" },
-                            h('h2', { className: "text-3xl font-black text-indigo-600" }, curr.w),
-                            h('button', { onClick: function() { speak(curr.w, speechRate, l_tag); }, className: "p-3 bg-indigo-50 rounded-2xl text-xl transition-all active:scale-90" }, "\uD83D\uDD0A")
+                    h('div', { className: "w-full max-w-lg animate-slide" },
+                        h('div', { className: "glass rounded-3xl p-8 mb-6 shadow-xl " + (subject === 'math' ? 'math-card' : '') },
+                            h('div', { className: 'flex justify-between items-start mb-6' },
+                                h('div', null,
+                                    h('h2', { className: "text-3xl font-black mb-2 " + (subject==='idiom'?'tracking-widest':'') }, curr.w),
+                                    curr.py && h('p', { className: "text-sm font-mono text-slate-400" }, curr.py)
+                                ),
+                                h('button', { onClick: function() { speak(curr.w, speechRate, l_tag); }, className: "p-3 bg-slate-100 rounded-2xl hover:bg-slate-200 transition-all" }, "🔊")
+                            ),
+                            h('div', { className: "space-y-4" },
+                                subject === 'math' ? 
+                                h('div', { className: "info-block bg-amber-50 border-amber-400" },
+                                    h('p', { className: "text-[10px] font-black text-amber-500 mb-1" }, "定理觀念 / 公式"),
+                                    h('p', { className: "text-xl font-bold leading-relaxed" }, curr.d)
+                                ) :
+                                (subject === 'idiom' ? 
+                                h('div', { className: "space-y-3" },
+                                    h('div', { className: "info-block bg-emerald-50 border-emerald-400" }, h('p', { className: "text-[10px] font-black text-emerald-500 mb-1 uppercase" }, "解釋"), h('p', { className: "text-md font-bold" }, curr.d)),
+                                    curr.o && h('div', { className: "info-block bg-slate-50 border-slate-300" }, h('p', { className: "text-[10px] font-black text-slate-400 mb-1 uppercase" }, "出處"), h('p', { className: "text-sm italic" }, curr.o)),
+                                    curr.x && h('div', { className: "info-block bg-indigo-50 border-indigo-300" }, h('p', { className: "text-[10px] font-black text-indigo-400 mb-1 uppercase" }, "例句"), h('p', { className: "text-sm leading-relaxed" }, curr.x))
+                                ) :
+                                h('div', { className: "space-y-3" },
+                                    h('div', { className: "info-block bg-indigo-50 border-indigo-400" }, h('p', { className: "text-[10px] font-black text-indigo-400 mb-1 uppercase" }, "Definition"), h('p', { className: "text-md font-bold" }, curr.d)),
+                                    curr.re && h('div', { className: "info-block bg-slate-50 border-slate-300" }, h('p', { className: "text-[10px] font-black text-slate-400 mb-1 uppercase" }, "Related"), h('p', { className: "text-sm" }, curr.re)),
+                                    curr.x && h('div', { className: "info-block bg-indigo-50 border-indigo-300" }, h('p', { className: "text-[10px] font-black text-indigo-400 mb-1 uppercase" }, "Example"), h('p', { className: "text-sm leading-relaxed italic" }, curr.x))
+                                ))
+                            )
                         ),
-                        h('hr', { className: "mb-6 border-slate-100" }),
-                        h('div', { className: "space-y-4" },
-                            curr.d && h('div', { className: "info-block bg-indigo-50 border-indigo-400" }, h('p', { className: "text-[10px] uppercase font-black text-indigo-400" }, "解釋"), h('p', { className: "text-base font-bold" }, curr.d)),
-                            curr.o && h('div', { className: "info-block bg-amber-50 border-amber-400" }, h('p', { className: "text-[10px] uppercase font-black text-amber-400" }, "出處"), h('p', { className: "text-sm" }, curr.o)),
-                            curr.x && h('div', { className: "info-block bg-blue-50 border-blue-400" }, h('p', { className: "text-[10px] uppercase font-black text-blue-400" }, "例句"), h('p', { className: "text-sm italic" }, curr.x)),
-                            curr.pr && h('div', { className: "info-block bg-purple-50 border-purple-400" }, h('p', { className: "text-[10px] uppercase font-black text-purple-400" }, "發音"), h('p', { className: "text-sm font-mono" }, curr.pr)),
-                            curr.re && h('div', { className: "info-block bg-teal-50 border-teal-400" }, h('p', { className: "text-[10px] uppercase font-black text-teal-400" }, "相關"), h('p', { className: "text-sm" }, curr.re)),
-                            curr.co && h('div', { className: "info-block bg-cyan-50 border-cyan-400" }, h('p', { className: "text-[10px] uppercase font-black text-cyan-400" }, "搭配詞"), h('p', { className: "text-sm" }, curr.co))
-                        ),
-                        h('div', { className: "grid grid-cols-4 gap-2 mt-10" }, ['again', 'hard', 'good', 'easy'].map(function(t) { return h('button', { key: t, onClick: function() { handleSRS(t); }, className: "btn-" + t + " py-4 rounded-2xl border-2 text-xs font-black transition-all transform active:scale-95" }, t.toUpperCase()); }))
+                        // SRS 控制項
+                        h('div', { className: "grid grid-cols-4 gap-3 h-20" },
+                            h('button', { onClick: function() { handleSRS('again'); }, className: "btn-again border-2 rounded-2xl flex flex-col items-center justify-center transition-all hover:scale-105 active:scale-95" }, h('span', { className: 'text-lg font-black' }, 'Again'), h('span', { className: 'text-[10px] font-bold opacity-50' }, '1')),
+                            h('button', { onClick: function() { handleSRS('hard'); }, className: "btn-hard border-2 rounded-2xl flex flex-col items-center justify-center transition-all hover:scale-105 active:scale-95" }, h('span', { className: 'text-lg font-black' }, 'Hard'), h('span', { className: 'text-[10px] font-bold opacity-50' }, '2')),
+                            h('button', { onClick: function() { handleSRS('good'); }, className: "btn-good border-2 rounded-2xl flex flex-col items-center justify-center transition-all hover:scale-105 active:scale-95 text-white bg-green-500 shadow-lg shadow-green-100" }, h('span', { className: 'text-lg font-black' }, 'Good'), h('span', { className: 'text-[10px] font-bold opacity-80' }, '3')),
+                            h('button', { onClick: function() { handleSRS('easy'); }, className: "btn-easy border-2 rounded-2xl flex flex-col items-center justify-center transition-all hover:scale-105 active:scale-95" }, h('span', { className: 'text-lg font-black' }, 'Easy'), h('span', { className: 'text-[10px] font-bold opacity-50' }, '4'))
+                        )
                     )
+                );
                 );
             }
             ReactDOM.createRoot(document.getElementById('root')).render(h(App));
