@@ -167,10 +167,12 @@ def build_html():
                 function handleCompositionStart() { composingRef.current = true; }
                 function handleCompositionEnd(idx, e) {
                     composingRef.current = false;
-                    var finalChar = e.data ? e.data.slice(-1) : '';
+                    // 如果 e.data 存在，則取最後一個字元
+                    var finalChar = (e.data && e.data.length > 0) ? e.data.slice(-1) : '';
                     if (finalChar && !submitted && idx !== 0) {
                         var nv = values.slice(); nv[idx] = finalChar;
                         setValues(nv);
+                        // 自動跳至下一格
                         if (idx < chars.length - 1) {
                             setTimeout(function() { inputsRef.current[idx + 1] && inputsRef.current[idx + 1].focus(); }, 50);
                         }
@@ -178,21 +180,33 @@ def build_html():
                 }
 
                 function handleInput(idx, e) {
-                    if (submitted || idx === 0 || composingRef.current) return;
-                    var val = e.target.value;
-                    var nv = values.slice(); nv[idx] = val.slice(-1);
-                    setValues(nv);
-                    if (val !== '' && idx < chars.length - 1) {
-                        setTimeout(function() { inputsRef.current[idx + 1] && inputsRef.current[idx + 1].focus(); }, 10);
+                    if (submitted || idx === 0) return;
+                    // 在非 IME 組合期間才處理輸入 (針對英文或直接貼上)
+                    if (!composingRef.current) {
+                        var val = e.target.value;
+                        if (!val) {
+                            var nv = values.slice(); nv[idx] = '';
+                            setValues(nv);
+                            return;
+                        }
+                        var nv = values.slice(); nv[idx] = val.slice(-1);
+                        setValues(nv);
+                        if (idx < chars.length - 1) {
+                            setTimeout(function() { inputsRef.current[idx + 1] && inputsRef.current[idx + 1].focus(); }, 10);
+                        }
+                    } else {
+                        // IME 期間暫存顯示數值以防輸入框看起來沒反應
+                        var nv = values.slice(); nv[idx] = e.target.value;
+                        setValues(nv);
                     }
                 }
 
                 function handleKeyDown(idx, e) {
-                    if (composingRef.current) return;
                     if (e.key === 'Backspace' && values[idx] === '' && idx > 1) {
                         setTimeout(function() { inputsRef.current[idx - 1] && inputsRef.current[idx - 1].focus(); }, 10);
+                        return;
                     }
-                    if (e.key === 'Enter') {
+                    if (e.key === 'Enter' && !composingRef.current) {
                         setSubmitted(true);
                         var isCorrect = values.join('') === word;
                         onComplete(isCorrect);
@@ -201,15 +215,21 @@ def build_html():
 
                 return h('div', { className: 'flex flex-col items-center gap-6' },
                     h('div', { className: 'flex justify-center gap-2 flex-wrap' }, chars.map(function(ch, i) {
+                        var isCorrect = values[i] === chars[i];
+                        var statusClass = '';
+                        if (i === 0) statusClass = 'bg-slate-50 border-slate-200 text-slate-400';
+                        else if (submitted) {
+                            statusClass = isCorrect ? 'border-green-500 bg-green-50 text-green-700 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'border-red-500 bg-red-50 text-red-700 shadow-[0_0_15px_rgba(239,68,68,0.2)]';
+                        } else {
+                            statusClass = 'border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100';
+                        }
+
                         return h('input', {
                             key: i,
                             ref: function(el) { inputsRef.current[i] = el; },
-                            className: 'w-14 h-16 text-center text-2xl font-black rounded-xl border-2 transition-all ' + 
-                                (i === 0 ? 'bg-slate-50 border-slate-200 text-slate-400' : 
-                                 submitted ? (values[i] === chars[i] ? 'border-green-500 bg-green-50 text-green-700' : 'border-red-500 bg-red-50 text-red-700') :
-                                 'border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100'),
+                            className: 'w-14 h-16 text-center text-2xl font-black rounded-xl border-2 transition-all ' + statusClass,
                             value: values[i],
-                            onChange: function(e) { handleInput(i, e); },
+                            onInput: function(e) { handleInput(i, e); },
                             onCompositionStart: handleCompositionStart,
                             onCompositionEnd: function(e) { handleCompositionEnd(i, e); },
                             onKeyDown: function(e) { handleKeyDown(i, e); },
@@ -220,7 +240,7 @@ def build_html():
                     !submitted && h('p', { className: 'text-xs font-black text-slate-300 animate-pulse' }, "輸入完成後按 Enter 檢查"),
                     submitted && h('div', { className: 'text-center' },
                         h('p', { className: 'text-sm font-bold ' + (values.join('') === word ? 'text-green-600' : 'text-red-500') },
-                            values.join('') === word ? '✅ 正確！' : '❌ 正確答案：' + word
+                            values.join('') === word ? '✨ 完美填寫！' : '📌 應該是：' + word
                         )
                     )
                 );
@@ -261,27 +281,32 @@ def build_html():
                 }
 
                 return h('div', { className: 'flex flex-col items-center gap-6' },
-                    h('div', { className: 'flex justify-center gap-1.5 flex-wrap' }, chars.map(function(ch, i) {
+                    h('div', { className: 'flex justify-center gap-1.5 flex-wrap font-mono' }, chars.map(function(ch, i) {
+                        var isCorrect = values[i] === chars[i];
+                        var statusClass = '';
+                        if (i === 0) statusClass = 'bg-slate-50 border-slate-200 text-slate-400';
+                        else if (submitted) {
+                            statusClass = isCorrect ? 'border-green-500 bg-green-50 text-green-700 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'border-red-500 bg-red-50 text-red-700 shadow-[0_0_15px_rgba(239,68,68,0.2)]';
+                        } else {
+                            statusClass = 'border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100';
+                        }
+
                         return h('input', {
                             key: i,
                             ref: function(el) { inputsRef.current[i] = el; },
-                            className: 'w-10 h-12 text-center text-lg font-black rounded-lg border-2 transition-all lowercase ' + 
-                                (i === 0 ? 'bg-slate-50 border-slate-200 text-slate-400' : 
-                                 submitted ? (values[i] === chars[i] ? 'border-green-500 bg-green-50 text-green-700' : 'border-red-500 bg-red-50 text-red-700') :
-                                 'border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100'),
+                            className: 'w-10 h-12 text-center text-xl font-black rounded-lg border-2 transition-all lowercase ' + statusClass,
                             value: values[i],
-                            onChange: function(e) { handleChange(i, e); },
+                            onInput: function(e) { handleChange(i, e); },
                             onKeyDown: function(e) { handleKeyDown(i, e); },
                             disabled: submitted || i === 0,
                             maxLength: 1,
-                            autoComplete: 'off',
-                            style: { fontFamily: "'Outfit', monospace" }
+                            autoComplete: 'off'
                         });
                     })),
                     !submitted && h('p', { className: 'text-xs font-black text-slate-300 animate-pulse' }, "輸入完成後按 Enter 檢查"),
                     submitted && h('div', { className: 'text-center' },
                         h('p', { className: 'text-sm font-bold ' + (values.join('') === word.toLowerCase() ? 'text-green-600' : 'text-red-500') },
-                            values.join('') === word.toLowerCase() ? '✅ 正確！' : '❌ 正確答案：' + word
+                            values.join('') === word.toLowerCase() ? '✨ 拼法正確！' : '📌 正確拼寫：' + word
                         )
                     )
                 );
