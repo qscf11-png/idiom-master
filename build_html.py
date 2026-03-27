@@ -208,18 +208,20 @@ def build_html():
                     }
                     if (e.key === 'Enter' && !composingRef.current) {
                         setSubmitted(true);
-                        var isCorrect = values.join('') === word;
-                        onComplete(isCorrect);
+                        // 移除立即觸發 onComplete，讓使用者先看回饋
                     }
                 }
 
+                var isWordCorrect = values.join('') === word;
+
                 return h('div', { className: 'flex flex-col items-center gap-6' },
                     h('div', { className: 'flex justify-center gap-2 flex-wrap' }, chars.map(function(ch, i) {
-                        var isCorrect = values[i] === chars[i];
                         var statusClass = '';
                         if (i === 0) statusClass = 'bg-slate-50 border-slate-200 text-slate-400';
                         else if (submitted) {
-                            statusClass = isCorrect ? 'border-green-500 bg-green-50 text-green-700 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'border-red-500 bg-red-50 text-red-700 shadow-[0_0_15px_rgba(239,68,68,0.2)]';
+                            statusClass = (values[i] === chars[i]) ? 
+                                'border-green-500 bg-green-50 text-green-700 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 
+                                'border-red-500 bg-red-50 text-red-700 shadow-[0_0_15px_rgba(239,68,68,0.2)]';
                         } else {
                             statusClass = 'border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100';
                         }
@@ -237,11 +239,15 @@ def build_html():
                             autoComplete: 'off'
                         });
                     })),
-                    !submitted && h('p', { className: 'text-xs font-black text-slate-300 animate-pulse' }, "輸入完成後按 Enter 檢查"),
-                    submitted && h('div', { className: 'text-center' },
-                        h('p', { className: 'text-sm font-bold ' + (values.join('') === word ? 'text-green-600' : 'text-red-500') },
-                            values.join('') === word ? '✨ 完美填寫！' : '📌 應該是：' + word
-                        )
+                    !submitted ? h('p', { className: 'text-xs font-black text-slate-300 animate-pulse' }, "輸入完成後按 Enter 檢查") :
+                    h('div', { className: 'text-center animate-in fade-in zoom-in duration-300' },
+                        h('p', { className: 'text-lg font-black mb-4 ' + (isWordCorrect ? 'text-green-600' : 'text-red-500') },
+                            isWordCorrect ? '✨ 太棒了！完美正確' : '📌 應該是：' + word
+                        ),
+                        h('button', { 
+                            onClick: function() { onComplete(isWordCorrect); },
+                            className: 'px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black shadow-lg shadow-indigo-100 hover:scale-105 transition-all'
+                        }, "查看完整詳細資料")
                     )
                 );
             }
@@ -272,21 +278,23 @@ def build_html():
                 function handleKeyDown(idx, e) {
                     if (e.key === 'Backspace' && values[idx] === '' && idx > 1) {
                         setTimeout(function() { inputsRef.current[idx - 1] && inputsRef.current[idx - 1].focus(); }, 10);
+                        return;
                     }
                     if (e.key === 'Enter') {
                         setSubmitted(true);
-                        var isCorrect = values.join('') === word.toLowerCase();
-                        onComplete(isCorrect);
                     }
                 }
 
-                return h('div', { className: 'flex flex-col items-center gap-6' },
-                    h('div', { className: 'flex justify-center gap-1.5 flex-wrap font-mono' }, chars.map(function(ch, i) {
-                        var isCorrect = values[i] === chars[i];
+                var isWordCorrect = values.join('') === word.toLowerCase();
+
+                return h('div', { className: 'flex flex-col items-center gap-6 font-mono' },
+                    h('div', { className: 'flex justify-center gap-1.5 flex-wrap' }, chars.map(function(ch, i) {
                         var statusClass = '';
                         if (i === 0) statusClass = 'bg-slate-50 border-slate-200 text-slate-400';
                         else if (submitted) {
-                            statusClass = isCorrect ? 'border-green-500 bg-green-50 text-green-700 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'border-red-500 bg-red-50 text-red-700 shadow-[0_0_15px_rgba(239,68,68,0.2)]';
+                            statusClass = (values[i] === chars[i]) ? 
+                                'border-green-500 bg-green-50 text-green-700 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 
+                                'border-red-500 bg-red-50 text-red-700 shadow-[0_0_15px_rgba(239,68,68,0.2)]';
                         } else {
                             statusClass = 'border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100';
                         }
@@ -303,11 +311,15 @@ def build_html():
                             autoComplete: 'off'
                         });
                     })),
-                    !submitted && h('p', { className: 'text-xs font-black text-slate-300 animate-pulse' }, "輸入完成後按 Enter 檢查"),
-                    submitted && h('div', { className: 'text-center' },
-                        h('p', { className: 'text-sm font-bold ' + (values.join('') === word.toLowerCase() ? 'text-green-600' : 'text-red-500') },
-                            values.join('') === word.toLowerCase() ? '✨ 拼法正確！' : '📌 正確拼寫：' + word
-                        )
+                    !submitted ? h('p', { className: 'text-xs font-black text-slate-300 animate-pulse' }, "輸入完成後按 Enter 檢查") :
+                    h('div', { className: 'text-center animate-in fade-in zoom-in duration-300' },
+                        h('p', { className: 'text-lg font-black mb-4 ' + (isWordCorrect ? 'text-green-600' : 'text-red-500') },
+                            isWordCorrect ? '✅ 拼法正確！' : '📌 正確答案：' + word
+                        ),
+                        h('button', { 
+                            onClick: function() { onComplete(isWordCorrect); },
+                            className: 'px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black shadow-lg shadow-indigo-100 hover:scale-105 transition-all'
+                        }, "查看詳細資訊")
                     )
                 );
             }
